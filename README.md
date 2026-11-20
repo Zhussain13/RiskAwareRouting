@@ -105,7 +105,7 @@ pre-labels and says so in every output.
 
 ```bash
 git clone https://github.com/Zhussain13/RiskAwareRouting.git
-cd RiskAwareRouter
+cd RiskAwareRouting
 pip install -r requirements.txt
 python run_pipeline.py --demo
 ```
