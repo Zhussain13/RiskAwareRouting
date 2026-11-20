@@ -17,6 +17,8 @@ from riskroute import parsing, simulator
 ap = argparse.ArgumentParser()
 ap.add_argument("--role", choices=["small", "large"], required=True)
 ap.add_argument("--limit", type=int, default=None, help="first N queries only (timing test)")
+ap.add_argument("--redo", nargs="*", default=[], metavar="ANSWER_TYPE",
+                help="re-answer these answer types (e.g. numeric code_output) after a prompt change")
 ap.add_argument("--demo", action="store_true")
 args = ap.parse_args()
 
@@ -28,6 +30,10 @@ if args.limit:
     df = df.head(args.limit)
 
 done = pd.read_csv(out_path, keep_default_na=False) if os.path.exists(out_path) else pd.DataFrame()
+if args.redo and len(done):
+    redo_ids = set(df.loc[df.answer_type.isin(args.redo), "id"])
+    done = done[~done["id"].isin(redo_ids)]
+    print(f"redoing {len(redo_ids)} queries of type {args.redo}")
 todo = df[~df["id"].isin(done["id"])] if len(done) else df
 print(f"{args.role}: {model_name} | {len(todo)} to answer, {len(done)} already done")
 

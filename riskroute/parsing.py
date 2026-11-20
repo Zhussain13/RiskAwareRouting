@@ -11,14 +11,16 @@ CONF_LINE = ("After your answer, write one final line exactly like 'CONFIDENCE: 
 
 FORMAT = {
     "open": CONF_LINE,
-    "numeric": ("Solve it briefly. Then write exactly three final lines:\n"
+    "numeric": ("Solve it step by step, briefly. Only AFTER your working, end your reply with "
+                "exactly these three lines:\n"
                 "ANSWER: <the final number only>\n"
                 "PYTHON: <one Python arithmetic expression that computes the answer>\n"
                 "CONFIDENCE: <1-10>"),
     "mc": ("Reply with exactly two lines:\nANSWER: <the letter of the correct option>\n"
            "CONFIDENCE: <1-10>"),
-    "code_output": ("Reply with the program's exact output between the lines OUTPUT_START "
-                    "and OUTPUT_END, nothing else, then a final line 'CONFIDENCE: N' (1-10)."),
+    "code_output": ("Trace the program step by step, briefly. Then write a line OUTPUT_START, "
+                    "then the program's exact output, then a line OUTPUT_END, and finally a line "
+                    "'CONFIDENCE: N' (1-10)."),
 }
 
 
@@ -64,12 +66,12 @@ def parse_letter(text: str):
 
 
 def parse_output_block(text: str):
-    m = re.search(r"OUTPUT_START\s*\n?(.*?)\n?\s*OUTPUT_END", text, flags=re.S)
-    if m:
-        out = m.group(1)
-    else:  # fall back to a fenced block
-        m = re.search(r"```(?:\w+)?\n(.*?)```", text, flags=re.S)
-        out = m.group(1) if m else text
+    blocks = re.findall(r"OUTPUT_START[ \t]*\n?(.*?)\n?[ \t]*OUTPUT_END", text, flags=re.S)
+    if blocks:
+        out = blocks[-1]               # the final answer block, after any tracing
+    else:  # fall back to the last fenced block
+        m = re.findall(r"```(?:\w+)?\n(.*?)```", text, flags=re.S)
+        out = m[-1] if m else text
     return normalise_output(out)
 
 

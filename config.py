@@ -26,8 +26,9 @@ VLLM_MAX_LEN = int(os.getenv("VLLM_MAX_LEN", "2048"))
 VLLM_MAX_SEQS = int(os.getenv("VLLM_MAX_SEQS", "64"))
 CHUNK = int(os.getenv("CHUNK", "300"))            # rows per checkpoint inside a stage
 
-# Answer length caps per answer type (short answers = fast runs + easier grading).
-MAX_TOKENS = {"open": 200, "numeric": 160, "mc": 40, "code_output": 60}
+# Answer length caps per answer type. Numeric and code answers need room to reason first:
+# with 160/60 tokens the models were cut off or answered before working it out.
+MAX_TOKENS = {"open": 200, "numeric": 512, "mc": 40, "code_output": 400}
 
 # ---------------------------------------------------------------- cost accounting
 # Everything runs free. For comparison, calls are priced at paid list prices
