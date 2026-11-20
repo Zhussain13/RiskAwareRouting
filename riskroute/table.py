@@ -50,7 +50,9 @@ def severity_column(df: pd.DataFrame, source: str = None):
                             how="left")["severity_human"]
         h = pd.to_numeric(h, errors="coerce")
         if h.notna().all():
-            return h.astype(int).to_numpy(), "human"
+            prov = os.path.join(config.DATA_DIR, "human", "PROVENANCE.md")
+            name = "author-supplied workbook (see data/human/PROVENANCE.md)" if os.path.exists(prov) else "human"
+            return h.astype(int).to_numpy(), name
         warnings.warn(f"{int(h.isna().sum())} queries lack human labels; falling back to LLM labels")
     if source in ("human", "llm") and "severity_llm" in df:
         if source == "human":
