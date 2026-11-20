@@ -6,6 +6,7 @@ Columns
     program output), faq_id (logistics: the FAQ entry that answers it, -1 = not in the FAQ),
     severity_prior, faq_sim, faq_margin, faq_match, context (FAQ entry given to the models)
 """
+import os
 import random
 
 import numpy as np
@@ -34,13 +35,27 @@ def cs_concepts():
     return _rows(df, "cs_concepts", "open", gold="", faq_id=-1)
 
 
+def _human(name):
+    """Rows added through the human workbook (import_human_workbook.py), if any."""
+    p = f"{config.DATA_DIR}/slices/{name}_human.csv"
+    return pd.read_csv(p, keep_default_na=False) if os.path.exists(p) else None
+
+
 def kanglish():
     df = pd.read_csv(f"{config.DATA_DIR}/slices/kanglish.csv")
+    extra = _human("kanglish")
+    if extra is not None:
+        df = pd.concat([df, extra[["query", "reference_answer"]]], ignore_index=True)
     return _rows(df, "kanglish", "open", gold="", faq_id=-1)
 
 
 def logistics(faq: FAQ):
     df = pd.read_csv(f"{config.DATA_DIR}/slices/logistics.csv")
+    extra = _human("logistics")
+    if extra is not None:   # paraphrases point at their FAQ entry by question text; "" = near-miss
+        pos = {q: i for i, q in enumerate(faq.df["question"])}
+        extra["faq_id"] = [pos.get(q, -1) if q else -1 for q in extra["faq_question"]]
+        df = pd.concat([df, extra[["query", "faq_id"]]], ignore_index=True)
     df["reference_answer"] = [faq.answer(i) if i >= 0 else NOT_IN_FAQ for i in df.faq_id]
     return _rows(df, "logistics", "open", gold="")
 

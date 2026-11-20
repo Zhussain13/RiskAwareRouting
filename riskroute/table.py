@@ -44,7 +44,11 @@ def severity_column(df: pd.DataFrame, source: str = None):
         return np.asarray(sev), "human (SIMULATED in demo)"
     human = os.path.join(config.DATA_DIR, "severity_human.csv")
     if source == "human" and os.path.exists(human):
-        h = df[["id"]].merge(pd.read_csv(human), on="id", how="left")["severity_human"]
+        hl = pd.read_csv(human, keep_default_na=False)
+        key = "query" if "query" in hl else "id"     # by text: survives dataset rebuilds
+        h = df[[key]].merge(hl[[key, "severity_human"]].drop_duplicates(key), on=key,
+                            how="left")["severity_human"]
+        h = pd.to_numeric(h, errors="coerce")
         if h.notna().all():
             return h.astype(int).to_numpy(), "human"
         warnings.warn(f"{int(h.isna().sum())} queries lack human labels; falling back to LLM labels")
