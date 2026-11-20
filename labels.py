@@ -41,8 +41,18 @@ if args.cmd == "export":
     print("Give one sheet to each annotator with data/rubric/severity_rubric.md.")
 
 elif args.cmd == "merge":
-    a = pd.read_csv(args.a)[["id", "query", "severity"]].rename(columns={"severity": "a"})
-    b = pd.read_csv(args.b)[["id", "severity"]].rename(columns={"severity": "b"})
+    def sheet(path):
+        """Reads an annotator file: the Excel workbook (sheet 'Label') or the CSV export."""
+        if path.endswith(".xlsx"):
+            d = pd.read_excel(path, sheet_name="Label").rename(
+                columns={"ID": "id", "Question": "query", "Severity": "severity", "Note": "note"})
+        else:
+            d = pd.read_csv(path)
+        d["severity"] = pd.to_numeric(d["severity"], errors="coerce")
+        return d
+
+    a = sheet(args.a)[["id", "query", "severity"]].rename(columns={"severity": "a"})
+    b = sheet(args.b)[["id", "severity"]].rename(columns={"severity": "b"})
     df = a.merge(b, on="id")
     done = df.dropna(subset=["a", "b"])
     if done.empty:
