@@ -1,6 +1,6 @@
 # RiskAwareRouter: Risk-Aware LLM Routing
 
-[![CI](https://github.com/Zhussain13/RiskAwareRouter/actions/workflows/ci.yml/badge.svg)](https://github.com/Zhussain13/RiskAwareRouter/actions/workflows/ci.yml)
+[![CI](https://github.com/Zhussain13/RiskAwareRouting/actions/workflows/ci.yml/badge.svg)](https://github.com/Zhussain13/RiskAwareRouting/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 ![Runs on](https://img.shields.io/badge/runs%20on-free%20Colab%20T4%20%3C%203h-brightgreen)
@@ -104,7 +104,7 @@ pre-labels and says so in every output.
 ## Quick start: demo mode (no GPU, about 30 seconds)
 
 ```bash
-git clone https://github.com/Zhussain13/RiskAwareRouter.git
+git clone https://github.com/Zhussain13/RiskAwareRouting.git
 cd RiskAwareRouter
 pip install -r requirements.txt
 python run_pipeline.py --demo
