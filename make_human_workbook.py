@@ -30,7 +30,7 @@ BODY, BOLD, SMALL = Font(name=F, size=10), Font(name=F, size=10, bold=True), Fon
 EXAMPLE = Font(name=F, size=10, italic=True, color="595959")
 WRAP = Alignment(wrap_text=True, vertical="top")
 LINE = Border(bottom=Side(style="thin", color="D9D9D9"))
-N_FAQ_ROWS, N_KANGLISH = 60, 100
+N_FAQ_ROWS, N_KANGLISH, N_B = 60, 100, None
 OUT_PATH = os.path.join(config.OUT_DIR, "StakesQA_human_work.xlsx")
 
 
@@ -85,7 +85,8 @@ def severity_sheet(ws, rows, who):
 
 
 # ------------------------------------------------------------------ judge audit
-def judge_sheet(ws, audit):
+def judge_sheet(ws, audit, prefill=None):
+    prefill = prefill or {}
     ws.title = "3_Judge_Audit"
     header(ws, ["#", "ID", "Question", "Reference answer (may be empty)", "Small model answer",
                 "Small correct? (Y/N)", "Large model answer", "Large correct? (Y/N)"],
@@ -96,9 +97,10 @@ def judge_sheet(ws, audit):
         body(ws.cell(k, 3), r.query)
         body(ws.cell(k, 4), r.reference_answer or "(none: judge used the large answer)")
         body(ws.cell(k, 5), str(r.small_answer)[:1500])
-        body(ws.cell(k, 6), None, BOLD, INPUT)
+        sm, lg = prefill.get(r.id, (None, None))
+        body(ws.cell(k, 6), sm, BOLD, INPUT)
         body(ws.cell(k, 7), str(r.large_answer)[:1500])
-        body(ws.cell(k, 8), None, BOLD, INPUT)
+        body(ws.cell(k, 8), lg, BOLD, INPUT)
         ws.row_dimensions[k].height = min(400, max(height(r.small_answer, 60), height(r.large_answer, 60)))
     last = len(audit) + 1
     dropdown(ws, f"F2:F{last}", ["Y", "N"], "Y = correct and helpful, N = wrong or unhelpful.")
@@ -107,9 +109,10 @@ def judge_sheet(ws, audit):
 
 
 # ------------------------------------------------------------------ new FAQ entries
-def faq_sheet(ws):
+def faq_sheet(ws, n_rows=None):
+    n_rows = n_rows or N_FAQ_ROWS
     ws.title = "4_New_FAQ"
-    cols = ["#", "Official FAQ question", "Official answer (from the circular)",
+    cols = ["#", "Official FAQ question", "Official answer: MUST state the real date / fee / number / rule from the circular",
             "Source (circular name + date, or office)", "Student paraphrase 1", "Student paraphrase 2",
             "Student paraphrase 3", "Near-miss question (sounds similar, NOT answered by this entry)",
             "Severity A (0-3)", "Severity B (0-3)", "Near-miss severity A", "Near-miss severity B"]
@@ -122,12 +125,12 @@ def faq_sheet(ws):
     for i, v in enumerate(ex, 1):
         body(ws.cell(2, i), v, EXAMPLE)
     ws.row_dimensions[2].height = 56
-    for k in range(3, 3 + N_FAQ_ROWS):
+    for k in range(3, 3 + n_rows):
         body(ws.cell(k, 1), k - 2)
         for col in range(2, 13):
             body(ws.cell(k, col), None, BODY, INPUT if col in (2, 3, 4, 5, 9, 10) else None)
         ws.row_dimensions[k].height = 42
-    last = 2 + N_FAQ_ROWS
+    last = 2 + n_rows
     for col in ("I", "J", "K", "L"):
         dropdown(ws, f"{col}3:{col}{last}", ["0", "1", "2", "3"], "Pick 0, 1, 2 or 3.")
     return last
@@ -151,7 +154,8 @@ def kanglish_sheet(ws, english):
 
 
 # ------------------------------------------------------------------ start sheet
-def start_sheet(ws, n, last):
+def start_sheet(ws, n, last, n_b=None, faq_target=45):
+    n_b = n_b or n
     ws.title = "Start_Here"
     ws.sheet_view.showGridLines = False
     for col, w in zip("ABCDE", (24, 16, 16, 14, 70)):
@@ -171,14 +175,16 @@ def start_sheet(ws, n, last):
     tasks = [
         ("1_Severity_A", "Annotator A (you)", f"=COUNT('1_Severity_A'!D2:D{last['A']})", n,
          "Severity 0-3 for every question (rubric below). Most take a few seconds. MAIN TASK."),
-        ("2_Severity_B", "Annotator B (a colleague)", f"=COUNT('2_Severity_B'!D2:D{last['B']})", n,
-         "Same questions, other order. B must NOT look at sheet 1 (send B a copy, or hide sheet 1)."),
+        ("2_Severity_B", "Annotator B (a colleague)", f"=COUNT('2_Severity_B'!D2:D{last['B']})", n_b,
+         ("Same questions, other order. " if n_b == n else f"{n_b} of the questions (enough to measure agreement). ")
+         + "B must NOT look at sheet 1: send B a copy with sheet 1 deleted, and do not discuss labels."),
         ("3_Judge_Audit", "One person (A)", f"=COUNTA('3_Judge_Audit'!F2:F{last['J']})", last["J"] - 1,
          "Y/N: is each model answer correct? Checks how accurate the LLM judge is. Judge from your own knowledge."),
-        ("4_New_FAQ", "One person + both for severity", f"=COUNTA('4_New_FAQ'!B3:B{last['F']})", 45,
-         "Real college FAQ entries (from circulars) with 3 student-style paraphrases and 1 near-miss each. Aim for 45+."),
+        ("4_New_FAQ", "One person + both for severity", f"=COUNTA('4_New_FAQ'!B3:B{last['F']})", faq_target,
+         "REAL college FAQ entries copied from actual circulars (real dates, fees, rules), each with 3 "
+         "paraphrases typed the way students really ask and 1 near-miss. No generic answers."),
         ("5_Kanglish", "Anyone fluent in Kannada", f"=COUNTA('5_Kanglish'!D3:D{last['K']})", last["K"] - 2,
-         "Rewrite each English question the way a student would type it in Kanglish."),
+         "Rewrite each question the way a student really types in Kanglish (not English + 'maadi' at the end)."),
     ]
     for t in tasks:
         r += 1
@@ -243,5 +249,73 @@ def build():
     return OUT_PATH
 
 
+# Order of slices in dataset.build(): ids q00000... follow it, so the slice can be recovered
+# from the id when only an earlier workbook is at hand.
+SLICE_ORDER = [("cs_concepts", 327), ("logistics", 38), ("code_output", 250), ("kanglish", 10),
+               ("gsm8k", 200), ("truthfulqa", 150), ("medmcqa", 150)]
+
+
+def slice_of(rid: str) -> str:
+    n, k = int(str(rid)[1:]), 0
+    for name, size in SLICE_ORDER:
+        if n < k + size:
+            return name
+        k += size
+    return "other"
+
+
+def build_quick(src: str, n_b: int = 300, n_faq: int = 15, n_kanglish: int = 30, out: str = None):
+    """Smaller workbook from an earlier one: A labels every question (grouped by type, so
+    similar questions sit together), B labels a stratified subset for agreement, the earlier
+    judge-audit answers are carried over, and the FAQ and Kanglish sheets are short."""
+    a = pd.read_excel(src, sheet_name="1_Severity_A").rename(columns={"ID": "id", "Question": "query"})
+    ds = a[["id", "query"]].copy()
+    ds["slice"] = ds.id.map(slice_of)
+    order = [n for n, _ in SLICE_ORDER]
+    ds_a = (ds.sample(frac=1, random_state=1)
+            .assign(o=lambda d: d.slice.map(order.index)).sort_values("o", kind="stable"))
+    ds_b = pd.concat([g.sample(n=max(1, round(n_b * len(g) / len(ds))), random_state=2)
+                      for _, g in ds.groupby("slice")]).sample(frac=1, random_state=3)
+    j = pd.read_excel(src, sheet_name="3_Judge_Audit")
+    audit = j.rename(columns={"ID": "id", "Question": "query", "Reference answer (may be empty)": "reference_answer",
+                              "Small model answer": "small_answer", "Large model answer": "large_answer"})
+    audit["reference_answer"] = audit.reference_answer.fillna("").replace(
+        "(none: judge used the large answer)", "")
+    prefill = {r.id: (r["Small correct? (Y/N)"] if isinstance(r["Small correct? (Y/N)"], str) else None,
+                      r["Large correct? (Y/N)"] if isinstance(r["Large correct? (Y/N)"], str) else None)
+               for _, r in j.rename(columns={"ID": "id"}).iterrows()}
+    k = pd.read_excel(src, sheet_name="5_Kanglish")
+    k = k[pd.to_numeric(k["#"], errors="coerce") >= 1].rename(
+        columns={"Source ID": "id", "English question": "query"})
+    kang_src = k[["id", "query"]].head(n_kanglish)
+
+    wb = Workbook()
+    ws0 = wb.active
+    last = {"A": severity_sheet(wb.create_sheet(), list(zip(ds_a.id, ds_a["query"])), "A"),
+            "B": severity_sheet(wb.create_sheet(), list(zip(ds_b.id, ds_b["query"])), "B")}
+    last["J"] = judge_sheet(wb.create_sheet(), audit, prefill)
+    last["F"] = faq_sheet(wb.create_sheet(), n_faq)
+    last["K"] = kanglish_sheet(wb.create_sheet(), kang_src)
+    start_sheet(ws0, len(ds), last, n_b=len(ds_b), faq_target=n_faq)
+    out = out or OUT_PATH
+    wb.save(out)
+    print(f"wrote {out}: A {len(ds_a)}, B {len(ds_b)}, judge {len(audit)} (prefilled "
+          f"{sum(1 for v in prefill.values() if v[0])}), FAQ {n_faq}, Kanglish {len(kang_src)}")
+    print("B subset by slice:", ds_b.slice.value_counts().to_dict())
+    return out
+
+
 if __name__ == "__main__":
-    build()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--from-workbook", help="build the quick version from an earlier workbook")
+    ap.add_argument("--b", type=int, default=300)
+    ap.add_argument("--faq", type=int, default=15)
+    ap.add_argument("--kanglish", type=int, default=30)
+    ap.add_argument("--out")
+    ap.add_argument("--demo", action="store_true")
+    a = ap.parse_args()
+    if a.from_workbook:
+        build_quick(a.from_workbook, a.b, a.faq, a.kanglish, a.out)
+    else:
+        build()
