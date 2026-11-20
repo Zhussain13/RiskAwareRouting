@@ -1,0 +1,6 @@
+# Real runs on a GPU (Google Colab T4). vLLM brings its own PyTorch.
+-r requirements.txt
+vllm
+sentence-transformers
+transformers
+datasets

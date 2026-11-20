@@ -1,0 +1,7 @@
+# CPU install: enough for demo mode, labelling and evaluate.py. No GPU, no model downloads.
+numpy
+pandas>=2.2
+scipy
+scikit-learn
+matplotlib
+tabulate
