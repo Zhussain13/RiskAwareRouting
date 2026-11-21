@@ -28,9 +28,12 @@ This project extends [SmartModelRouter](https://github.com/Zhussain13/SmartModel
 (FAQ → small → large, routing on difficulty only). It keeps that project's models, data
 and routers as baselines.
 
-> **Status: research in progress.** The pipeline and tests are complete and run end to end
-> in demo mode. Real results will be added after the Colab run and the human severity
-> labelling. Demo numbers are simulated and must not be reported.
+> **Status:** complete pipeline, run end to end on a free Colab T4 (about 40 minutes of GPU time).
+> Final results: [`results/final_run_2026-11-21.md`](results/final_run_2026-11-21.md).
+> Headline: both calibration guarantees hold (CRC mean severity-weighted error 0.0450 against a
+> budget of 0.05; LTT under budget in 98% of splits). Severity-3 errors fall by half or more versus
+> SmartModelRouter, and verification cuts cost by 12.6%. Predicting severity itself gave
+> no measurable gain at matched cost, which is reported as a negative result. Demo-mode numbers are simulated.
 
 ---
 
